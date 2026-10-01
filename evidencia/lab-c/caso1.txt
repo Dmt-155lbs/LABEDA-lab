@@ -1,0 +1,26 @@
+===== LAB C - CASO 1: consumidor fuera de servicio y recuperacion =====
+--- docker compose stop recommendation-service ---
+ Container labeda-lab-recommendation-service-1 Stopping 
+ Container labeda-lab-recommendation-service-1 Stopped 
+
+--- Cola antes de publicar (punto de partida limpio) ---
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	0
+
+--- Publicando 10 eventos de riesgo (CAF-1..CAF-10, available=2 minimum=10) ---
+{"sku":"CAF-1","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"22fa1323-a2ec-4046-99a4-5d9b30833a64","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-2","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"8dee1512-f089-4c46-a913-06bc4e0befe8","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-3","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"f8d3ea14-ae21-4c6d-8ce3-604c6ef7f70b","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-4","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"df15576a-4f2d-48ee-8327-c347bc267077","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-5","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"45dfe9ac-3da7-40e4-9599-144b4a285da6","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-6","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"c38783f2-382e-4b10-a538-7b16b221e4a4","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-7","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"c1ba8c05-0f3d-4795-a2d9-38854561d1b8","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-8","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"3b39aca0-9b55-471b-bbe3-a0271eecf23a","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-9","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"9278637f-4ab3-494f-9b1a-563a9e807f11","message":"Riesgo detectado; evento publicado"}
+{"sku":"CAF-10","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"31e15575-7271-460c-a2cb-943836ec929c","message":"Riesgo detectado; evento publicado"}
+
+--- Mensajes pendientes con el consumidor detenido ---
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	10	0	0

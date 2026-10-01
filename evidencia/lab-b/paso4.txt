@@ -1,0 +1,27 @@
+===== LAB B - PASO 4: conexion REST entre servicios =====
+--- docker compose ps ---
+labeda-lab-inventory-service-1	running	0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+labeda-lab-rabbitmq-1	running	0.0.0.0:5672->5672/tcp, [::]:5672->5672/tcp, 0.0.0.0:15672->15672/tcp, [::]:15672->15672/tcp
+labeda-lab-recommendation-service-1	running	0.0.0.0:8081->8081/tcp, [::]:8081->8081/tcp
+
+--- API directa de recommendation-service (puerto 8081) ---
+HTTP/1.1 200 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Thu, 01 Oct 2026 18:22:04 GMT
+
+{"sku":"CAF-500","available":4,"minimum":10,"riskDetected":true,"action":"Revisar compra o transferencia"}
+--- Proxy REST: inventory (8080) llama a recommendation (8081) por DNS interno ---
+HTTP/1.1 200 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Thu, 01 Oct 2026 18:22:04 GMT
+
+{"sku":"CAF-500","available":4,"minimum":10,"riskDetected":true,"action":"Revisar compra o transferencia"}
+--- Caso sin riesgo por el proxy ---
+HTTP/1.1 200 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Thu, 01 Oct 2026 18:22:04 GMT
+
+{"sku":"CAF-500","available":15,"minimum":10,"riskDetected":false,"action":"No se requiere acción"}

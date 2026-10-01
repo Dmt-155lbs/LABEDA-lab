@@ -1,0 +1,36 @@
+===== LAB C - CASO 1: recuperacion =====
+--- docker compose start recommendation-service ---
+ Container labeda-lab-rabbitmq-1 Waiting 
+ Container labeda-lab-rabbitmq-1 Healthy 
+ Container labeda-lab-recommendation-service-1 Starting 
+ Container labeda-lab-recommendation-service-1 Started 
+
+--- Recomendaciones generadas al reanudar (los 10 pendientes) ---
+eventId=22fa1323-a2ec-4046-99a4-5d9b30833a64 sku=CAF-1
+eventId=8dee1512-f089-4c46-a913-06bc4e0befe8 sku=CAF-2
+eventId=f8d3ea14-ae21-4c6d-8ce3-604c6ef7f70b sku=CAF-3
+eventId=df15576a-4f2d-48ee-8327-c347bc267077 sku=CAF-4
+eventId=45dfe9ac-3da7-40e4-9599-144b4a285da6 sku=CAF-5
+eventId=c38783f2-382e-4b10-a538-7b16b221e4a4 sku=CAF-6
+eventId=c1ba8c05-0f3d-4795-a2d9-38854561d1b8 sku=CAF-7
+eventId=3b39aca0-9b55-471b-bbe3-a0271eecf23a sku=CAF-8
+eventId=9278637f-4ab3-494f-9b1a-563a9e807f11 sku=CAF-9
+eventId=31e15575-7271-460c-a2cb-943836ec929c sku=CAF-10
+
+--- Verificacion uno a uno de los 10 eventId publicados ---
+   22fa1323-a2ec-4046-99a4-5d9b30833a64 -> 1
+   8dee1512-f089-4c46-a913-06bc4e0befe8 -> 1
+   f8d3ea14-ae21-4c6d-8ce3-604c6ef7f70b -> 1
+   df15576a-4f2d-48ee-8327-c347bc267077 -> 1
+   45dfe9ac-3da7-40e4-9599-144b4a285da6 -> 1
+   c38783f2-382e-4b10-a538-7b16b221e4a4 -> 1
+   c1ba8c05-0f3d-4795-a2d9-38854561d1b8 -> 1
+   3b39aca0-9b55-471b-bbe3-a0271eecf23a -> 1
+   9278637f-4ab3-494f-9b1a-563a9e807f11 -> 1
+   31e15575-7271-460c-a2cb-943836ec929c -> 1
+   TOTAL procesados de los 10 publicados: 10
+
+--- Cola despues de reanudar ---
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	1

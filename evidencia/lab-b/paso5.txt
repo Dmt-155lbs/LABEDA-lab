@@ -1,0 +1,45 @@
+===== LAB B - PASO 5: comparar REST (sincrono) con RabbitMQ (asincrono) =====
+--- Deteniendo recommendation-service ---
+ Container labeda-lab-recommendation-service-1 Stopping 
+ Container labeda-lab-recommendation-service-1 Stopped 
+
+>>> A) Llamada REST con el servicio caido: se espera 503
+HTTP/1.1 503 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Thu, 01 Oct 2026 18:23:05 GMT
+Connection: close
+
+{"timestamp":"2026-10-01T18:23:05.379+00:00","status":503,"error":"Service Unavailable","path":"/api/inventory/recommendation-preview"}
+[tiempo total: 40.296956s]
+
+>>> B) Endpoint de eventos con el MISMO servicio caido: se espera 200
+HTTP/1.1 200 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Thu, 01 Oct 2026 18:23:05 GMT
+
+{"sku":"CAF-500","location":"QUITO-CENTRO","available":4,"minimum":10,"riskDetected":true,"eventId":"ab9d3cdb-bde4-46b4-afa5-025035265862","message":"Riesgo detectado; evento publicado"}
+[tiempo total: 0.136160s]
+
+--- Mensajes pendientes (el evento SI se encolo) ---
+Listing queues for vhost / ...
+name	messages_ready
+recommendation.stockout-risk.q	1
+
+--- Reanudando el consumidor ---
+ Container labeda-lab-rabbitmq-1 Waiting 
+ Container labeda-lab-rabbitmq-1 Healthy 
+ Container labeda-lab-recommendation-service-1 Starting 
+ Container labeda-lab-recommendation-service-1 Started 
+
+--- El evento encolado se procesa al reanudar ---
+recommendation-service-1  | 2026-10-01T18:23:12.084Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=ab9d3cdb-bde4-46b4-afa5-025035265862 sku=CAF-500 location=QUITO-CENTRO available=4 minimum=10 action=Revisar compra o transferencia
+
+--- Cola final ---
+Listing queues for vhost / ...
+name	messages_ready
+recommendation.stockout-risk.q	0
+
+--- Y la llamada REST vuelve a funcionar ---
+REST tras reanudar: HTTP 200
