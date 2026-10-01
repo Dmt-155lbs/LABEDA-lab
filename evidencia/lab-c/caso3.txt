@@ -1,0 +1,199 @@
+=== CASO 3: fallo, reintento y DLQ === Thu Oct  1 13:29:43 HPS 2026
+
+### 0. Pre-borrado: cola vacia?
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	1
+audit.stockout-risk.q	0	0	1
+
+### Parar recommendation-service (para que no recree la cola sin args)
+ Container labeda-lab-recommendation-service-1 Stopping 
+ Container labeda-lab-recommendation-service-1 Stopped 
+
+### Borrar SOLO recommendation.stockout-risk.q
+Deleting queue 'recommendation.stockout-risk.q' on vhost '/' ...
+Queue was successfully deleted with 0 ready messages
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+audit.stockout-risk.q	0	0	1
+
+### 1. Rebuild y arranque
+#15 exporting manifest list sha256:cc63c5103030ba7c19eaeab81ab0a5088e11dc91e1c93c70cb716d6078a1dfc3 0.0s done
+#15 naming to docker.io/library/labeda-lab-recommendation-service:latest done
+#15 unpacking to docker.io/library/labeda-lab-recommendation-service:latest 0.1s done
+#15 DONE 1.6s
+
+#16 resolving provenance for metadata file
+#16 DONE 0.0s
+ Image labeda-lab-recommendation-service Built 
+ Container labeda-lab-rabbitmq-1 Running 
+ Container labeda-lab-recommendation-service-1 Recreate 
+ Container labeda-lab-recommendation-service-1 Recreated 
+ Container labeda-lab-rabbitmq-1 Waiting 
+ Container labeda-lab-rabbitmq-1 Healthy 
+ Container labeda-lab-recommendation-service-1 Starting 
+ Container labeda-lab-recommendation-service-1 Started 
+
+### 1b. Logs de arranque (busqueda de errores)
+recommendation-service-1  | 
+recommendation-service-1  |  :: Spring Boot ::                (v3.5.6)
+recommendation-service-1  | 
+recommendation-service-1  | 2026-10-01T18:30:19.353Z  INFO 1 --- [           main] e.u.l.r.RecommendationApplication        : Starting RecommendationApplication v1.0.0 using Java 21.0.12.1 with PID 1 (/app/app.jar started by root in /app)
+recommendation-service-1  | 2026-10-01T18:30:19.357Z  INFO 1 --- [           main] e.u.l.r.RecommendationApplication        : No active profile set, falling back to 1 default profile: "default"
+recommendation-service-1  | 2026-10-01T18:30:20.701Z  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+recommendation-service-1  | 2026-10-01T18:30:20.713Z  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+recommendation-service-1  | 2026-10-01T18:30:20.713Z  INFO 1 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+recommendation-service-1  | 2026-10-01T18:30:20.736Z  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+recommendation-service-1  | 2026-10-01T18:30:20.737Z  INFO 1 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1312 ms
+recommendation-service-1  | 2026-10-01T18:30:21.030Z  WARN 1 --- [           main] o.s.r.backoff.ExponentialBackOffPolicy   : Multiplier must be > 1.0 for effective exponential backoff, but was 1.0
+recommendation-service-1  | 2026-10-01T18:30:21.050Z  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
+recommendation-service-1  | 2026-10-01T18:30:21.057Z  INFO 1 --- [           main] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [rabbitmq:5672]
+recommendation-service-1  | 2026-10-01T18:30:21.122Z  INFO 1 --- [           main] o.s.a.r.c.CachingConnectionFactory       : Created new connection: rabbitConnectionFactory#14998e21:0/SimpleConnection@5ba90d8a [delegate=amqp://lab@172.31.2.2:5672/, localPort=50438]
+recommendation-service-1  | 2026-10-01T18:30:21.220Z  INFO 1 --- [           main] e.u.l.r.RecommendationApplication        : Started RecommendationApplication in 2.336 seconds (process running for 3.189)
+--- coincidencias PRECONDITION_FAILED/ERROR: 0
+
+### 2. Colas
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	1
+audit.stockout-risk.q	0	0	1
+recommendation.stockout-risk.dlq	0	0	0
+
+### Argumentos de la cola principal
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	arguments
+recommendation.stockout-risk.q	[{"x-dead-letter-exchange","logistpulse.dlx"},{"x-dead-letter-routing-key","recommendation.stockout-risk.dead"}]
+audit.stockout-risk.q	[]
+recommendation.stockout-risk.dlq	[]
+
+### Bindings
+Listing bindings for vhost /...
+source_name	destination_name	routing_key
+	recommendation.stockout-risk.q	recommendation.stockout-risk.q
+	audit.stockout-risk.q	audit.stockout-risk.q
+	recommendation.stockout-risk.dlq	recommendation.stockout-risk.dlq
+logistpulse.dlx	recommendation.stockout-risk.dlq	recommendation.stockout-risk.dead
+logistpulse.events	audit.stockout-risk.q	inventory.stockout-risk.detected
+logistpulse.events	recommendation.stockout-risk.q	inventory.stockout-risk.detected
+
+### NOTA: la primera ejecucion de prueba (eventId ab9fa225-..., 3 intentos, DLQ=1) mostro un WARN de ExponentialBackOffPolicy (multiplier 1.0);
+### se cambio a FixedBackOffPolicy, se purga la DLQ (solo mensaje de prueba) y se reconstruye para una verificacion limpia.
+ Container labeda-lab-recommendation-service-1 Stopping 
+ Container labeda-lab-recommendation-service-1 Stopped 
+Purging queue 'recommendation.stockout-risk.dlq' in vhost '/' ...
+ Container labeda-lab-rabbitmq-1 Waiting 
+ Container labeda-lab-rabbitmq-1 Healthy 
+ Container labeda-lab-recommendation-service-1 Starting 
+ Container labeda-lab-recommendation-service-1 Started 
+
+### 1c. Arranque limpio tras ajuste
+recommendation-service-1  | 2026-10-01T18:31:46.487Z  INFO 1 --- [           main] e.u.l.r.RecommendationApplication        : Started RecommendationApplication in 2.61 seconds (process running for 3.03)
+--- coincidencias PRECONDITION_FAILED/ERROR/WARN: 0
+
+### 2. Colas
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	1
+audit.stockout-risk.q	0	0	1
+recommendation.stockout-risk.dlq	0	0	0
+
+### 3. Publicar FAIL-TEST
+{"sku":"FAIL-TEST","location":"QUITO-CENTRO","available":1,"minimum":10,"riskDetected":true,"eventId":"5c9874c7-11b7-4b53-b666-a1ed845dfd21","message":"Riesgo detectado; evento publicado"}
+EVENT_ID=5c9874c7-11b7-4b53-b666-a1ed845dfd21
+
+### 4. Logs del eventId 5c9874c7-11b7-4b53-b666-a1ed845dfd21 en recommendation-service
+recommendation-service-1  | 2026-10-01T18:31:59.554Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21 sku=FAIL-TEST
+recommendation-service-1  | 2026-10-01T18:31:59.555Z  WARN 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_FALLIDO attempt=1/3 eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21 sku=FAIL-TEST
+recommendation-service-1  | 2026-10-01T18:32:00.557Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=2/3 eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21 sku=FAIL-TEST
+recommendation-service-1  | 2026-10-01T18:32:00.558Z  WARN 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_FALLIDO attempt=2/3 eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21 sku=FAIL-TEST
+recommendation-service-1  | 2026-10-01T18:32:01.559Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=3/3 eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21 sku=FAIL-TEST
+recommendation-service-1  | 2026-10-01T18:32:01.560Z  WARN 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_FALLIDO attempt=3/3 eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21 sku=FAIL-TEST
+recommendation-service-1  | Caused by: java.lang.IllegalStateException: Fallo controlado: el SKU FAIL-TEST siempre falla (eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21, intento 3)
+recommendation-service-1  | Caused by: java.lang.IllegalStateException: Fallo controlado: el SKU FAIL-TEST siempre falla (eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21, intento 3)
+--- INTENTO_PROCESAMIENTO count: 3
+--- INTENTO_FALLIDO count: 3
+--- total lineas con eventId: 8
+
+### 5. Estado colas tras agotar reintentos
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged
+recommendation.stockout-risk.q	0	0
+audit.stockout-risk.q	0	0
+recommendation.stockout-risk.dlq	1	0
+
+### Contenido de la DLQ (payload via management API)
+[{"payload_bytes":167,"redelivered":false,"exchange":"logistpulse.dlx","routing_key":"recommendation.stockout-risk.dead","message_count":0,"properties":{"priority":0,"delivery_mode":2,"headers":{"__TypeId__":"edu.usfq.logistpulse.contract.StockoutRiskDetected","x-death":[{"count":1,"exchange":"logistpulse.events","queue":"recommendation.stockout-risk.q","reason":"rejected","routing-keys":["inventory.stockout-risk.detected"],"time":1790879521}],"x-first-death-exchange":"logistpulse.events","x-first-death-queue":"recommendation.stockout-risk.q","x-first-death-reason":"rejected","x-last-death-exchange":"logistpulse.events","x-last-death-queue":"recommendation.stockout-risk.q","x-last-death-reason":"rejected"},"content_encoding":"UTF-8","content_type":"application/json"},"payload":"{\"eventId\":\"5c9874c7-11b7-4b53-b666-a1ed845dfd21\",\"occurredAt\":\"2026-10-01T18:31:59.471036321Z\",\"sku\":\"FAIL-TEST\",\"location\":\"QUITO-CENTRO\",\"available\":1,\"minimum\":10}","payload_encoding":"string"}]
+
+### 6. Evento normal despues del fallo
+{"sku":"OK-AFTER-FAIL","location":"QUITO-CENTRO","available":2,"minimum":10,"riskDetected":true,"eventId":"0c6ceef2-a45c-44d8-974e-a491d360a8fd","message":"Riesgo detectado; evento publicado"}
+OK_EVENT_ID=0c6ceef2-a45c-44d8-974e-a491d360a8fd
+--- recommendation-service log para 0c6ceef2-a45c-44d8-974e-a491d360a8fd:
+recommendation-service-1  | 2026-10-01T18:32:22.910Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=0c6ceef2-a45c-44d8-974e-a491d360a8fd sku=OK-AFTER-FAIL
+recommendation-service-1  | 2026-10-01T18:32:22.911Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=0c6ceef2-a45c-44d8-974e-a491d360a8fd sku=OK-AFTER-FAIL location=QUITO-CENTRO available=2 minimum=10 action=Revisar compra o transferencia
+--- INTENTOS para OK-AFTER-FAIL: 1
+--- INTENTOS FAIL-TEST sigue siendo: 3
+--- colas:
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	1
+audit.stockout-risk.q	0	0	1
+recommendation.stockout-risk.dlq	1	0	0
+
+### 7. audit-service log (FAIL-TEST y OK-AFTER-FAIL)
+audit-service-1  | 2026-10-01T18:31:59.478Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21 sku=FAIL-TEST location=QUITO-CENTRO available=1 minimum=10 occurredAt=2026-10-01T18:31:59.471036321Z
+audit-service-1  | 2026-10-01T18:32:22.910Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=0c6ceef2-a45c-44d8-974e-a491d360a8fd sku=OK-AFTER-FAIL location=QUITO-CENTRO available=2 minimum=10 occurredAt=2026-10-01T18:32:22.905096090Z
+--- lineas ERROR/WARN/Exception en audit-service: 0
+--- audit-service ultimas lineas:
+audit-service-1  | 2026-10-01T18:26:37.842Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=cc347f5c-e476-42d6-9d4b-9c1656eb797f sku=AUDIT-2 location=GUAYAQUIL-NORTE available=1 minimum=10 occurredAt=2026-10-01T18:26:37.832887772Z
+audit-service-1  | 2026-10-01T18:27:55.855Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=a953bbba-0055-4e3e-b868-adf46ebb5dcd sku=REVIEW-1 location=CUENCA-SUR available=1 minimum=10 occurredAt=2026-10-01T18:27:55.848061771Z
+audit-service-1  | 2026-10-01T18:30:47.651Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=ab9fa225-52b3-432f-9478-b83487c6c71c sku=FAIL-TEST location=QUITO-CENTRO available=1 minimum=10 occurredAt=2026-10-01T18:30:47.646072986Z
+audit-service-1  | 2026-10-01T18:31:59.478Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=5c9874c7-11b7-4b53-b666-a1ed845dfd21 sku=FAIL-TEST location=QUITO-CENTRO available=1 minimum=10 occurredAt=2026-10-01T18:31:59.471036321Z
+audit-service-1  | 2026-10-01T18:32:22.910Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=0c6ceef2-a45c-44d8-974e-a491d360a8fd sku=OK-AFTER-FAIL location=QUITO-CENTRO available=2 minimum=10 occurredAt=2026-10-01T18:32:22.905096090Z
+
+### 8. Estado final de todas las colas
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	1
+audit.stockout-risk.q	0	0	1
+recommendation.stockout-risk.dlq	1	0	0
+--- estado contenedores
+NAME                                  IMAGE                               COMMAND                  SERVICE                  CREATED          STATUS                    PORTS
+labeda-lab-audit-service-1            labeda-lab-audit-service            "java -jar /app/app.…"   audit-service            6 minutes ago    Up 6 minutes              
+labeda-lab-inventory-service-1        labeda-lab-inventory-service        "java -jar /app/app.…"   inventory-service        11 minutes ago   Up 10 minutes             0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+labeda-lab-rabbitmq-1                 rabbitmq:3.13-management            "docker-entrypoint.s…"   rabbitmq                 16 minutes ago   Up 16 minutes (healthy)   0.0.0.0:5672->5672/tcp, [::]:5672->5672/tcp, 0.0.0.0:15672->15672/tcp, [::]:15672->15672/tcp
+labeda-lab-recommendation-service-1   labeda-lab-recommendation-service   "java -jar /app/app.…"   recommendation-service   55 seconds ago   Up 54 seconds             0.0.0.0:8081->8081/tcp, [::]:8081->8081/tcp
+
+========================================================================
+VERIFICACION INDEPENDIENTE (revision, no parte de la ejecucion original)
+========================================================================
+Se publico un SEGUNDO evento FAIL-TEST para confirmar el comportamiento:
+  eventId = ecf72e4d-e837-4847-aa7d-3d710c1e0c46  (location=REVIEW-CHECK)
+
+Resultado:
+  INTENTO_PROCESAMIENTO para ese eventId : 3
+  INTENTO_FALLIDO para ese eventId       : 3
+  Timestamps: 18:33:31.573 -> 18:33:32.574 -> 18:33:33.578  (separacion ~1s)
+  Total de lineas de log con ese eventId : 8  (3 intentos + 3 fallos + 2 del stacktrace)
+  => no hay bucle infinito de reintentos
+
+Argumentos reales de la cola principal confirmados en RabbitMQ:
+  recommendation.stockout-risk.q
+    [{"x-dead-letter-exchange","logistpulse.dlx"},
+     {"x-dead-letter-routing-key","recommendation.stockout-risk.dead"}]
+
+Estado de colas tras esta segunda prueba:
+  recommendation.stockout-risk.q    0 ready  0 unacked  1 consumidor
+  audit.stockout-risk.q             0 ready  0 unacked  1 consumidor
+  recommendation.stockout-risk.dlq  2 ready  0 unacked  0 consumidores
+
+NOTA: la DLQ contiene 2 mensajes porque se ejecutaron DOS pruebas FAIL-TEST:
+la de la implementacion original y esta verificacion independiente. Cada una
+agoto sus 3 intentos y deposito exactamente 1 mensaje en la DLQ.
