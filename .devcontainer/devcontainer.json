@@ -1,0 +1,12 @@
+{
+  "name": "LOGISTPULSE RabbitMQ Lab",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "forwardPorts": [8080, 15672],
+  "portsAttributes": {
+    "8080": {"label": "Inventory API", "onAutoForward": "notify", "visibility": "private"},
+    "15672": {"label": "RabbitMQ Management", "onAutoForward": "openBrowser", "visibility": "private"}
+  }
+}
