@@ -1,0 +1,94 @@
+=== 1. docker compose up --build -d audit-service ===
+ Image labeda-lab-audit-service Building 
+ Image labeda-lab-audit-service Built 
+ Container labeda-lab-rabbitmq-1 Running 
+ Container labeda-lab-audit-service-1 Recreate 
+ Container labeda-lab-audit-service-1 Recreated 
+ Container labeda-lab-rabbitmq-1 Waiting 
+ Container labeda-lab-rabbitmq-1 Healthy 
+ Container labeda-lab-audit-service-1 Starting 
+ Container labeda-lab-audit-service-1 Started 
+
+=== docker compose logs audit-service ===
+audit-service-1  |   .   ____          _            __ _ _
+audit-service-1  |  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+audit-service-1  | ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+audit-service-1  |  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+audit-service-1  |   '  |____| .__|_| |_|_| |_\__, | / / / /
+audit-service-1  |  =========|_|==============|___/=/_/_/_/
+audit-service-1  |  :: Spring Boot ::                (v3.5.6)
+audit-service-1  | 2026-10-01T18:26:17.674Z  INFO 1 --- [           main] e.u.logistpulse.audit.AuditApplication   : Starting AuditApplication v1.0.0 using Java 21.0.12.1 with PID 1 (/app/app.jar started by root in /app)
+audit-service-1  | 2026-10-01T18:26:17.677Z  INFO 1 --- [           main] e.u.logistpulse.audit.AuditApplication   : No active profile set, falling back to 1 default profile: "default"
+audit-service-1  | 2026-10-01T18:26:18.844Z  INFO 1 --- [           main] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [rabbitmq:5672]
+audit-service-1  | 2026-10-01T18:26:18.891Z  INFO 1 --- [           main] o.s.a.r.c.CachingConnectionFactory       : Created new connection: rabbitConnectionFactory#54d901aa:0/SimpleConnection@102ecc22 [delegate=amqp://lab@172.31.2.2:5672/, localPort=37040]
+audit-service-1  | 2026-10-01T18:26:18.958Z  INFO 1 --- [           main] e.u.logistpulse.audit.AuditApplication   : Started AuditApplication in 1.709 seconds (process running for 2.132)
+
+=== audit-service Up (sin starter-web, sin puertos publicados) ===
+NAME                         IMAGE                      COMMAND                  SERVICE         CREATED          STATUS          PORTS
+labeda-lab-audit-service-1   labeda-lab-audit-service   "java -jar /app/app.…"   audit-service   12 seconds ago   Up 10 seconds   
+
+=== 2. list_queues ===
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	consumers
+recommendation.stockout-risk.q	0	1
+audit.stockout-risk.q	0	1
+
+=== 3. list_bindings ===
+Listing bindings for vhost /...
+source_name	routing_key	destination_name
+	recommendation.stockout-risk.q	recommendation.stockout-risk.q
+	audit.stockout-risk.q	audit.stockout-risk.q
+logistpulse.events	inventory.stockout-risk.detected	audit.stockout-risk.q
+logistpulse.events	inventory.stockout-risk.detected	recommendation.stockout-risk.q
+
+=== 4. Publicar UN evento ===
+{"sku":"AUDIT-1","location":"QUITO-CENTRO","available":3,"minimum":10,"riskDetected":true,"eventId":"ee6abd6c-169e-4c90-975d-720837c1aaef","message":"Riesgo detectado; evento publicado"}
+eventId=ee6abd6c-169e-4c90-975d-720837c1aaef
+
+=== 5. docker compose logs recommendation-service | grep ee6abd6c-169e-4c90-975d-720837c1aaef ===
+recommendation-service-1  | 2026-10-01T18:26:30.106Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=ee6abd6c-169e-4c90-975d-720837c1aaef sku=AUDIT-1 location=QUITO-CENTRO available=3 minimum=10 action=Revisar compra o transferencia
+
+=== docker compose logs audit-service | grep ee6abd6c-169e-4c90-975d-720837c1aaef ===
+audit-service-1  | 2026-10-01T18:26:30.160Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=ee6abd6c-169e-4c90-975d-720837c1aaef sku=AUDIT-1 location=QUITO-CENTRO available=3 minimum=10 occurredAt=2026-10-01T18:26:30.101506885Z
+
+=== 6. Detener recommendation-service y publicar otro evento ===
+ Container labeda-lab-recommendation-service-1 Stopping 
+ Container labeda-lab-recommendation-service-1 Stopped 
+{"sku":"AUDIT-2","location":"GUAYAQUIL-NORTE","available":1,"minimum":10,"riskDetected":true,"eventId":"cc347f5c-e476-42d6-9d4b-9c1656eb797f","message":"Riesgo detectado; evento publicado"}
+eventId=cc347f5c-e476-42d6-9d4b-9c1656eb797f
+
+--- list_queues (recommendation detenido) ---
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	consumers
+recommendation.stockout-risk.q	1	0
+audit.stockout-risk.q	0	1
+
+--- audit-service grep cc347f5c-e476-42d6-9d4b-9c1656eb797f ---
+audit-service-1  | 2026-10-01T18:26:37.842Z  INFO 1 --- [ntContainer#0-1] e.u.l.audit.StockoutRiskAuditListener    : AUDITORIA_REGISTRADA eventId=cc347f5c-e476-42d6-9d4b-9c1656eb797f sku=AUDIT-2 location=GUAYAQUIL-NORTE available=1 minimum=10 occurredAt=2026-10-01T18:26:37.832887772Z
+
+--- recommendation-service grep cc347f5c-e476-42d6-9d4b-9c1656eb797f (esperado: vacio, aun detenido) ---
+(fin grep)
+
+=== Reanudar recommendation-service ===
+ Container labeda-lab-rabbitmq-1 Waiting 
+ Container labeda-lab-rabbitmq-1 Healthy 
+ Container labeda-lab-recommendation-service-1 Starting 
+ Container labeda-lab-recommendation-service-1 Started 
+
+--- recommendation-service grep cc347f5c-e476-42d6-9d4b-9c1656eb797f (tras reanudar) ---
+recommendation-service-1  | 2026-10-01T18:26:49.792Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=cc347f5c-e476-42d6-9d4b-9c1656eb797f sku=AUDIT-2 location=GUAYAQUIL-NORTE available=1 minimum=10 action=Revisar compra o transferencia
+
+--- list_queues final ---
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name	messages_ready	consumers
+recommendation.stockout-risk.q	0	1
+audit.stockout-risk.q	0	1
+
+NAME                                  IMAGE                               COMMAND                  SERVICE                  CREATED          STATUS                    PORTS
+labeda-lab-audit-service-1            labeda-lab-audit-service            "java -jar /app/app.…"   audit-service            50 seconds ago   Up 49 seconds             
+labeda-lab-inventory-service-1        labeda-lab-inventory-service        "java -jar /app/app.…"   inventory-service        5 minutes ago    Up 5 minutes              0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+labeda-lab-rabbitmq-1                 rabbitmq:3.13-management            "docker-entrypoint.s…"   rabbitmq                 11 minutes ago   Up 11 minutes (healthy)   0.0.0.0:5672->5672/tcp, [::]:5672->5672/tcp, 0.0.0.0:15672->15672/tcp, [::]:15672->15672/tcp
+labeda-lab-recommendation-service-1   labeda-lab-recommendation-service   "java -jar /app/app.…"   recommendation-service   5 minutes ago    Up 19 seconds             0.0.0.0:8081->8081/tcp, [::]:8081->8081/tcp

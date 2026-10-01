@@ -42,3 +42,14 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+
+  audit-service:
+    build: ./audit-service
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: lab
+      SPRING_RABBITMQ_PASSWORD: lab123
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
