@@ -1,0 +1,33 @@
+===== ACTIVIDAD 3: consumidor detenido =====
+# Recomendaciones acumuladas ANTES de detener:
+6
+
+--- docker compose stop recommendation-service ---
+ Container labeda-lab-recommendation-service-1 Stopping 
+ Container labeda-lab-recommendation-service-1 Stopped 
+
+--- Estado de la cola con el consumidor detenido (consumers debe ser 0) ---
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	0
+
+--- Publicando 2 solicitudes de riesgo (payload de la Actividad 1) ---
+### Solicitud 1:
+HTTP/1.1 200 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Thu, 01 Oct 2026 18:17:43 GMT
+
+{"sku":"CAF-500","location":"QUITO-CENTRO","available":4,"minimum":10,"riskDetected":true,"eventId":"9305707c-b9d5-4977-881f-e707c9cd8d12","message":"Riesgo detectado; evento publicado"}
+### Solicitud 2:
+HTTP/1.1 200 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Thu, 01 Oct 2026 18:17:43 GMT
+
+{"sku":"CAF-500","location":"QUITO-CENTRO","available":4,"minimum":10,"riskDetected":true,"eventId":"b0643a23-d6aa-4622-88fd-3aaf2713292d","message":"Riesgo detectado; evento publicado"}
+
+--- Cola DESPUES de publicar con el consumidor detenido ---
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	2	0	0

@@ -1,0 +1,26 @@
+===== ACTIVIDAD 4: consumidor reanudado =====
+# eventId publicados mientras estaba detenido:
+   9305707c-b9d5-4977-881f-e707c9cd8d12
+   b0643a23-d6aa-4622-88fd-3aaf2713292d
+
+--- docker compose start recommendation-service ---
+ Container labeda-lab-rabbitmq-1 Waiting 
+ Container labeda-lab-rabbitmq-1 Healthy 
+ Container labeda-lab-recommendation-service-1 Starting 
+ Container labeda-lab-recommendation-service-1 Started 
+
+--- Recomendaciones generadas tras reanudar (ultimas 2) ---
+recommendation-service-1  | 2026-10-01T18:18:08.095Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=9305707c-b9d5-4977-881f-e707c9cd8d12 sku=CAF-500 location=QUITO-CENTRO available=4 minimum=10 action=Revisar compra o transferencia
+recommendation-service-1  | 2026-10-01T18:18:08.100Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=b0643a23-d6aa-4622-88fd-3aaf2713292d sku=CAF-500 location=QUITO-CENTRO available=4 minimum=10 action=Revisar compra o transferencia
+
+--- Verificacion: los dos eventId pendientes aparecen en los logs? ---
+   9305707c-b9d5-4977-881f-e707c9cd8d12 -> 1 coincidencia(s)
+   b0643a23-d6aa-4622-88fd-3aaf2713292d -> 1 coincidencia(s)
+
+--- Cola despues de reanudar (debe volver a 0 Ready, 1 consumer) ---
+Listing queues for vhost / ...
+name	messages_ready	messages_unacknowledged	consumers
+recommendation.stockout-risk.q	0	0	1
+
+# Total de recomendaciones acumuladas (eran 6 antes de detener, +2 pendientes = 8):
+8

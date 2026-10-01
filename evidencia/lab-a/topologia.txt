@@ -1,0 +1,15 @@
+===== TOPOLOGIA: exchange, routing key y cola (criterio de enrutamiento) =====
+--- Exchanges ---
+name	type	durable
+logistpulse.events	topic	true
+
+--- Bindings del exchange logistpulse.events ---
+Listing bindings for vhost /...
+source_name	routing_key	destination_name	destination_kind
+	recommendation.stockout-risk.q	recommendation.stockout-risk.q	queue
+logistpulse.events	inventory.stockout-risk.detected	recommendation.stockout-risk.q	queue
+
+--- Colas (durabilidad) ---
+Listing queues for vhost / ...
+name	durable	messages	consumers
+recommendation.stockout-risk.q	true	0	1

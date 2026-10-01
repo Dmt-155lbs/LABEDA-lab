@@ -1,0 +1,6 @@
+# Tiempo total de la respuesta HTTP del productor (5 mediciones, segundos)
+  intento 1: 0.007824s  (http 200)
+  intento 2: 0.007669s  (http 200)
+  intento 3: 0.007748s  (http 200)
+  intento 4: 0.007184s  (http 200)
+  intento 5: 0.008843s  (http 200)
