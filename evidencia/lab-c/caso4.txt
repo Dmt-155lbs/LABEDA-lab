@@ -1,0 +1,92 @@
+=== 1. Arranque ===
+2026-10-01T18:35:48.999Z  INFO 1 --- [           main] e.u.l.r.RecommendationApplication        : Started RecommendationApplication in 2.702 seconds (process running for 3.156)
+=== Colas antes ===
+  audit.stockout-risk.q                    ready=0 unacked=0 total=0
+  recommendation.stockout-risk.dlq         ready=2 unacked=0 total=2
+  recommendation.stockout-risk.q           ready=0 unacked=0 total=0
+=== 2. Publicar mismo eventId=DUP-TEST-0001 dos veces ===
+{"routed":true}
+{"routed":true}
+=== 3. Conteos para DUP-TEST-0001 ===
+INTENTO_PROCESAMIENTO: 2
+RECOMENDACION_PENDIENTE: 1
+EVENTO_DUPLICADO_IGNORADO: 1
+2026-10-01T18:36:04.476Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=DUP-TEST-0001 sku=DUP-500
+2026-10-01T18:36:04.477Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=DUP-TEST-0001 sku=DUP-500 location=QUITO-CENTRO available=2 minimum=10 action=Revisar compra o transferencia
+2026-10-01T18:36:07.769Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=DUP-TEST-0001 sku=DUP-500
+2026-10-01T18:36:07.770Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : EVENTO_DUPLICADO_IGNORADO eventId=DUP-TEST-0001 sku=DUP-500
+=== 4. Colas ===
+  audit.stockout-risk.q                    ready=0 unacked=0 total=0
+  recommendation.stockout-risk.dlq         ready=2 unacked=0 total=2
+  recommendation.stockout-risk.q           ready=0 unacked=0 total=0
+=== 5. Caso 3 FAIL-TEST via productor ===
+{"sku":"FAIL-TEST","location":"NOREG","available":1,"minimum":10,"riskDetected":true,"eventId":"c3f4949d-6f4c-4d68-b6af-691f5eca661d","message":"Riesgo detectado; evento publicado"}
+eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d
+INTENTO_PROCESAMIENTO: 3
+INTENTO_FALLIDO: 3
+EVENTO_DUPLICADO_IGNORADO: 0
+2026-10-01T18:36:15.359Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d sku=FAIL-TEST
+2026-10-01T18:36:15.359Z  WARN 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_FALLIDO attempt=1/3 eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d sku=FAIL-TEST
+2026-10-01T18:36:16.362Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=2/3 eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d sku=FAIL-TEST
+2026-10-01T18:36:16.363Z  WARN 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_FALLIDO attempt=2/3 eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d sku=FAIL-TEST
+2026-10-01T18:36:17.364Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=3/3 eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d sku=FAIL-TEST
+2026-10-01T18:36:17.364Z  WARN 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_FALLIDO attempt=3/3 eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d sku=FAIL-TEST
+Caused by: java.lang.IllegalStateException: Fallo controlado: el SKU FAIL-TEST siempre falla (eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d, intento 3)
+Caused by: java.lang.IllegalStateException: Fallo controlado: el SKU FAIL-TEST siempre falla (eventId=c3f4949d-6f4c-4d68-b6af-691f5eca661d, intento 3)
+  audit.stockout-risk.q                    ready=0 unacked=0 total=0
+  recommendation.stockout-risk.dlq         ready=3 unacked=0 total=3
+  recommendation.stockout-risk.q           ready=0 unacked=0 total=0
+=== 6. Flujo normal ===
+{"sku":"NORMAL-77","location":"GUAYAQUIL","available":3,"minimum":10,"riskDetected":true,"eventId":"7c1e3e64-baea-4550-9a43-c5b1eefdadc9","message":"Riesgo detectado; evento publicado"}
+eventId=7c1e3e64-baea-4550-9a43-c5b1eefdadc9
+INTENTO_PROCESAMIENTO: 1
+RECOMENDACION_PENDIENTE: 1
+EVENTO_DUPLICADO_IGNORADO: 0
+2026-10-01T18:36:27.223Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=7c1e3e64-baea-4550-9a43-c5b1eefdadc9 sku=NORMAL-77
+2026-10-01T18:36:27.223Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=7c1e3e64-baea-4550-9a43-c5b1eefdadc9 sku=NORMAL-77 location=GUAYAQUIL available=3 minimum=10 action=Revisar compra o transferencia
+=== 7. Limitacion de memoria: reinicio y republicacion de DUP-TEST-0001 ===
+ Container labeda-lab-recommendation-service-1 Restarting 
+ Container labeda-lab-recommendation-service-1 Started 
+{"routed":true}
+(el log del contenedor persiste tras restart; acumulado total para DUP-TEST-0001:)
+INTENTO_PROCESAMIENTO: 3
+RECOMENDACION_PENDIENTE: 2
+EVENTO_DUPLICADO_IGNORADO: 1
+2026-10-01T18:36:04.476Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=DUP-TEST-0001 sku=DUP-500
+2026-10-01T18:36:04.477Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=DUP-TEST-0001 sku=DUP-500 location=QUITO-CENTRO available=2 minimum=10 action=Revisar compra o transferencia
+2026-10-01T18:36:07.769Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=DUP-TEST-0001 sku=DUP-500
+2026-10-01T18:36:07.770Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : EVENTO_DUPLICADO_IGNORADO eventId=DUP-TEST-0001 sku=DUP-500
+2026-10-01T18:36:42.026Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : INTENTO_PROCESAMIENTO attempt=1/3 eventId=DUP-TEST-0001 sku=DUP-500
+2026-10-01T18:36:42.027Z  INFO 1 --- [ntContainer#0-1] e.u.l.r.StockoutRiskListener             : RECOMENDACION_PENDIENTE eventId=DUP-TEST-0001 sku=DUP-500 location=QUITO-CENTRO available=2 minimum=10 action=Revisar compra o transferencia
+=== Estado final de colas ===
+  audit.stockout-risk.q                    ready=0 unacked=0 total=0
+  recommendation.stockout-risk.dlq         ready=3 unacked=0 total=3
+  recommendation.stockout-risk.q           ready=0 unacked=0 total=0
+
+========================================================================
+VERIFICACION INDEPENDIENTE (revision)
+========================================================================
+Se repitio la prueba con un eventId propio, entregado dos veces por la API
+de management de RabbitMQ:
+  eventId = REVIEW-DUP-9999   (sku REV-500, location LOJA-NORTE)
+  Ambas publicaciones devolvieron {"routed":true}
+
+Conteos para ese eventId:
+  INTENTO_PROCESAMIENTO     : 2   <- dos entregas observadas
+  RECOMENDACION_PENDIENTE   : 1   <- una sola recomendacion efectiva
+  EVENTO_DUPLICADO_IGNORADO : 1   <- la segunda entrega se descarto
+
+No regresion del Caso 3, con FAIL-TEST publicado por el API del productor:
+  eventId = d97f64bd-9072-4078-9ec5-e06edcf40bac
+  INTENTO_PROCESAMIENTO     : 3   <- los reintentos siguen intactos
+  EVENTO_DUPLICADO_IGNORADO : 0   <- la deduplicacion NO interfiere con el reintento
+  DLQ: paso de 3 a 4 mensajes
+
+Estado final de colas:
+  recommendation.stockout-risk.q    0 ready  0 unacked  1 consumidor
+  audit.stockout-risk.q             0 ready  0 unacked  1 consumidor
+  recommendation.stockout-risk.dlq  4 ready  0 unacked  0 consumidores
+
+La DLQ acumula 4 mensajes porque se ejecutaron 4 pruebas FAIL-TEST en total
+a lo largo de los Casos 3 y 4 y sus dos verificaciones independientes. Cada
+una deposito exactamente 1 mensaje tras agotar sus 3 intentos.
